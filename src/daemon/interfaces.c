@@ -207,7 +207,7 @@ iface_append_vlan(struct lldpd *cfg,
     struct interfaces_device *lower)
 {
 	struct lldpd_hardware *hardware =
-	    lldpd_get_hardware(cfg, lower->name, lower->index);
+	    lldpd_get_hardware(cfg, lower->name, lower->index, NULL);
 	struct lldpd_port *port;
 	struct lldpd_vlan *v;
 	char *name = NULL;
@@ -378,7 +378,7 @@ interfaces_helper_chassis(struct lldpd *cfg,
 
 		if ((hardware = lldpd_get_hardware(cfg,
 			    iface->name,
-			    iface->index)) == NULL)
+			    iface->index, NULL)) == NULL)
 			/* That's odd. Let's skip. */
 			continue;
 
@@ -657,6 +657,7 @@ interfaces_helper_physical(struct lldpd *cfg,
 	struct interfaces_device *iface;
 	struct lldpd_hardware *hardware;
 	int created;
+	int recreate_socket = 0;
 
 	TAILQ_FOREACH(iface, interfaces, next) {
 		if (!(iface->type & IFACE_PHYSICAL_T)) continue;
@@ -667,7 +668,7 @@ interfaces_helper_physical(struct lldpd *cfg,
 		created = 0;
 		if ((hardware = lldpd_get_hardware(cfg,
 			    iface->name,
-			    iface->index)) == NULL) {
+			    iface->index, &recreate_socket)) == NULL) {
 			if  ((hardware = lldpd_alloc_hardware(cfg,
 				    iface->name,
 				    iface->index)) == NULL) {
@@ -679,7 +680,7 @@ interfaces_helper_physical(struct lldpd *cfg,
 		}
 		if (hardware->h_flags)
 			continue;
-		if (hardware->h_ops != ops) {
+		if (hardware->h_ops != ops || recreate_socket) {
 			if (!created) {
 				log_debug("interfaces",
 				    "interface %s is converted from another type of interface",

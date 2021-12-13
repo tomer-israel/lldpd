@@ -141,13 +141,23 @@ usage(void)
 }
 
 struct lldpd_hardware *
-lldpd_get_hardware(struct lldpd *cfg, char *name, int index)
+lldpd_get_hardware(struct lldpd *cfg, char *name, int index, int *recreate_socket)
 {
 	struct lldpd_hardware *hardware;
 	TAILQ_FOREACH(hardware, &cfg->g_hardware, h_entries) {
 		if (strcmp(hardware->h_ifname, name) == 0) {
-			if (hardware->h_flags == 0) {
-				hardware->h_ifindex = index;
+		    if (hardware->h_flags == 0) {
+			    if (hardware->h_ifindex != index) {
+			        log_info("localchassis", "index is different hardware->h_ifindex (%d) != index(%d) --> recreating the socket",
+			                 hardware->h_ifindex, index);
+			        hardware->h_ifindex = index;
+                    /* when the new ifindex is different than the original ifindex it means that we need to recreate the socket, */
+                    /* the way to do it is to set recreate_socket to 1 */
+                    /* and outside the function we will use this variable in order to recreate the socket */
+			        if (recreate_socket) {
+			           *recreate_socket = 1;
+			        }
+			    }
 				break;
 			}
 			if (hardware->h_ifindex == index)
